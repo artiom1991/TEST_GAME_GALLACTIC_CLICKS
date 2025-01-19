@@ -4,7 +4,7 @@ import { RigidBody2D, Label, AudioSource, sys } from 'cc';
 
 const { ccclass, property } = _decorator;
 
-interface UserData {  bestScore: number; }
+export interface UserData {  bestScore: number; }
 
 
 /**
@@ -40,10 +40,10 @@ export class GameManager extends Component {
     }
 
 
-    /* Создаёт звезду с случайными физическими свойствами и позициями. */
+    /** Создаёт звезду с случайными физическими свойствами и позициями. */
     private generateStar () : void {
-        let star = instantiate(this.star);
-        let rigidBody = star.getComponent(RigidBody2D);
+        const star = instantiate(this.star);
+        const rigidBody = star.getComponent(RigidBody2D);
 
         rigidBody.gravityScale = this.generateRandomNumber(2, 1, false);
         rigidBody.angularVelocity = this.generateRandomNumber(5, 0, false);
@@ -59,8 +59,8 @@ export class GameManager extends Component {
     }
 
 
-    /* Планирует создание звезды через случайный промежуток времени. */
-    private randomSchedule() {
+    /** Планирует создание звезды через случайный промежуток времени. */
+    private randomSchedule() : void {
         this.scheduleOnce(() => {
             this.generateStar();
             this.randomSchedule();
@@ -68,23 +68,25 @@ export class GameManager extends Component {
     }
 
 
-    /* Генерирует случайное число с учётом множителя, смещения и опции знака. */
-    private generateRandomNumber(multiplier: number, offset: number = 0, signed:boolean = false): number {
-        let randomSign  = Math.random() > 0.5 ? 1: -1;
-        let number = Math.random() * multiplier + offset;
-        return signed ? number * randomSign : number;
+    /** Генерирует случайное число с учётом множителя, смещения и опции знака. */
+    private generateRandomNumber(multiplier: number, offset: number = 0, signed:boolean = false) : number {
+        const randomSign  = signed && Math.random() > 0.5 ? -1: 1;
+        const number = Math.random() * multiplier + offset;
+        
+        return number * randomSign;
     }
 
 
-    /* Уничтожает указанный узел, если он действителен. */
-    private destroyNode(node:Node) {
-        if(node && node.isValid)
+    /** Уничтожает указанный узел, если он действителен. */
+    private destroyNode(node:Node) : void {
+        if(node && node.isValid){
             node.destroy();
+        }
     }
 
 
-    /* Увеличивает текущий счёт на 1 и обновляет текстовое поле для отображения нового значения. */
-    private updateScore() {
+    /** Увеличивает текущий счёт на 1 и обновляет текстовое поле для отображения нового значения. */
+    private updateScore() : void {
         this.scoreLabel.string = `Score: ${++this.scoreValue}`;
     }
 
@@ -93,14 +95,13 @@ export class GameManager extends Component {
      * Обновляет таймер и отображает оставшееся время.
      * Когда таймер достигает 0, останавливает обновление и вызывает конец игры.
     */
-    private updateTimer():void {
-        if(this.timerValue > 0){
+    private updateTimer() : void {
+        if(this.timerValue > 0) {
             this.timerLabel.string = `Timer: ${--this.timerValue}`;
-            return;
+        } else {
+            this.unschedule(this.updateTimer);
+            this.endGame();
         }
-
-        this.unschedule(this.updateTimer);
-        this.endGame();
     }
 
 
@@ -108,9 +109,10 @@ export class GameManager extends Component {
      * Обрабатывает нажатие клавиши на клавиатуре.
      * Если нажата клавиша ESCAPE, переключает состояние игры между паузой и продолжением.
      */
-    private onKeyDown(event: { keyCode: KeyCode }) {
-        if(event.keyCode === KeyCode.ESCAPE)
+    private onKeyDown(event: {keyCode: KeyCode}) : void {
+        if(event.keyCode === KeyCode.ESCAPE){
             this.isGamePaused ? this.resumeGame() : this.pauseGame();
+        }
     }
 
 
@@ -118,9 +120,8 @@ export class GameManager extends Component {
      * Обрабатывает событие клика на звезду.
      * Если игра не на паузе, проигрывает звук, обновляет счёт и уничтожает объект звезды.
      */
-    private onStarClicked(event: EventMouse) {
-        if (this.isGamePaused) return;
-
+    private onStarClicked(event: EventMouse) : void {
+        if (this.isGamePaused) { return }
         this.disappearanceSong.play();
         this.updateScore();
         event.target.destroy();
@@ -131,8 +132,10 @@ export class GameManager extends Component {
      * Обновляет данные пользователя в локальном хранилище.
      * Сохраняет текущий лучший счёт в `localStorage` под ключом `userData`.
      */
-    private updateUserData() {
-        sys.localStorage.setItem('userData', JSON.stringify({"bestScore": this.scoreValue}))
+    private updateUserData() : void {
+        const userData = { bestScore: this.scoreValue ?  this.scoreValue : 0};
+        try { sys.localStorage.setItem('userData', JSON.stringify(userData)); } 
+        catch (error) { console.error("Ошибка при сохранении данных пользователя в localStorage:", error); }
     }
 
 
@@ -141,17 +144,29 @@ export class GameManager extends Component {
      * Если данные пользователя существуют, извлекает лучший счёт и присваивает его значению `bestScoreValue`.
      * Если данные отсутствуют, создаёт их, вызвав `updateUserData`.
      */
-    private loadUserData() {
-        let userData:UserData = JSON.parse(sys.localStorage.getItem('userData'));
-        userData ? this.bestScoreValue = userData.bestScore : this.updateUserData();
+    private loadUserData() : void {
+        try {
+            const storageData = sys.localStorage.getItem('userData');
+            const userData: UserData | null = JSON.parse(storageData);
+
+            if (!userData || userData.bestScore === undefined) {
+                throw new Error("Разобранные данные равны null, undefined или не содержат bestScore");
+            }
+
+            this.bestScoreValue = userData.bestScore;
+
+        } catch (error) {
+            console.error("Ошибка при загрузке или разборе данных пользователя:", error);
+            this.updateUserData();  
+        }
     }
 
-
+    
     /**
      * Ставит игру на паузу.
      * Приостанавливает обновление игрового процесса, активирует окно паузы и отменяет все запланированные колбэки.
      */
-    private pauseGame() {
+    private pauseGame() : void {
         director.pause();
         this.isGamePaused = true;
         this.pauseWindow.active = true;
@@ -164,7 +179,7 @@ export class GameManager extends Component {
      * Приостанавливает игровой процесс, обновляет лучший счёт, отображает текущий и лучший счёт,
      * активирует окно завершения игры и отменяет все запланированные колбэки.
      */
-    private endGame() {
+    private endGame() : void {
         director.pause();
         this.bestScoreValue < this.scoreValue ? this.updateUserData() : null;
         this.currentScoreLabel.string = `Score: ${this.scoreValue}`;
@@ -179,7 +194,7 @@ export class GameManager extends Component {
      * Возобновляет игровой процесс после паузы.
      * Снимает паузу, скрывает окно паузы, перезапускает таймер и генерацию звёзд, а также продолжает игровой цикл.
      */
-    public resumeGame() {
+    public resumeGame() : void {
         this.isGamePaused = false;
         this.pauseWindow.active = false;
         this.randomSchedule();
@@ -192,60 +207,60 @@ export class GameManager extends Component {
      * Перезапускает игру.
      * Перезагружает текущую игровую сцену, сбрасывая всё её состояние.
      */
-    public restartGame() {
+    public restartGame() : void {
         director.loadScene("GameScene");
     }
 
 
-    /* Префаб звезды, используемый для генерации игровых объектов. */
+    /** Префаб звезды, используемый для генерации игровых объектов. */
     @property(Prefab)
     star: Prefab;
 
-    /* Метка для отображения текущего счёта. */
+    /** Метка для отображения текущего счёта. */
     @property(Label)
     scoreLabel: Label;
 
-    /* Метка для отображения лучшего счёта. */
+    /** Метка для отображения лучшего счёта. */
     @property(Label)
     bestScoreLabel: Label;
 
-    /* Метка для отображения финального счёта в окне завершения игры. */
+    /** Метка для отображения финального счёта в окне завершения игры. */
     @property(Label)
     currentScoreLabel: Label;
 
-    /* Метка для отображения оставшегося времени. */
+    /** Метка для отображения оставшегося времени. */
     @property(Label)
     timerLabel: Label;
 
-    /* Метка, связанная с отображением состояния паузы. */
+    /** Метка, связанная с отображением состояния паузы. */
     @property(Label)
     pauseLabel: Label;
 
-    /* Аудиоисточник для воспроизведения звука при клике на звезду. */
+    /** Аудиоисточник для воспроизведения звука при клике на звезду. */
     @property(AudioSource)
     disappearanceSong: AudioSource;
 
-    /* Узел окна паузы, отображаемого при остановке игры. */
+    /** Узел окна паузы, отображаемого при остановке игры. */
     @property(Node)
     pauseWindow: Node;
 
-    /* Узел окна завершения игры. */
+    /** Узел окна завершения игры. */
     @property(Node)
     endGameWindow: Node;
 
-    /* Узел сцены, используемый как родитель для создаваемых объектов. */
+    /** Узел сцены, используемый как родитель для создаваемых объектов. */
     canvas: Node = null;
 
-    /* Текущее значение счёта игрока. */
+    /** Текущее значение счёта игрока. */
     scoreValue: number = 0;
 
-    /* Лучший счёт игрока, сохранённый из предыдущих сессий. */
+    /** Лучший счёт игрока, сохранённый из предыдущих сессий. */
     bestScoreValue: number = 0;
 
-    /* Текущее значение таймера (в секундах). */
+    /** Текущее значение таймера (в секундах). */
     timerValue: number = 60;
 
-    /* Флаг, указывающий, находится ли игра на паузе. */
+    /** Флаг, указывающий, находится ли игра на паузе. */
     isGamePaused: boolean = false;
 
 }

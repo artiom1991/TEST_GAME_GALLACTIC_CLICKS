@@ -1,5 +1,6 @@
-import { _decorator, Component, director } from 'cc';
+import { _decorator, Component, director, Scene, Node } from 'cc';
 import {GameManager} from "./GameManager";
+
 const { ccclass } = _decorator;
 
 
@@ -15,9 +16,12 @@ export class EndGameWindowManager extends Component {
      * Метод для перезапуска игры.
      * Находит компонент `GameManager` на сцене и вызывает метод перезапуска игры.
      */
-    private restartGame() {
-        let gameManager = director.getScene().getChildByName("GameManager").getComponent(GameManager);
-        gameManager.restartGame();
+    private restartGame() :void {
+        const scene:Scene = director.getScene();
+        const gameManager:Node = scene.getChildByName("GameManager");
+        const gameManagerComponent:GameManager = gameManager.getComponent(GameManager);
+        
+        gameManagerComponent.restartGame();
     }
 
 
@@ -25,7 +29,7 @@ export class EndGameWindowManager extends Component {
      * Метод для перехода в главное меню.
      * Загружает сцену главного меню и отменяет все запланированные задачи.
      */
-    private mainMenu() {
+    private mainMenu() :void {
         director.loadScene("MainMenuScene");
         this.unscheduleAllCallbacks();
     }

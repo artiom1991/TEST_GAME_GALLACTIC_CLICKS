@@ -1,4 +1,4 @@
-import { _decorator, Component, director } from 'cc';
+import { _decorator, Component, director, Scene, Node } from 'cc';
 import {GameManager} from "./GameManager";
 const { ccclass } = _decorator;
 
@@ -15,9 +15,12 @@ export class PauseWindowManager extends Component {
      * Метод для возобновления игры.
      * Он получает компонент GameManager из текущей сцены и вызывает метод resumeGame для продолжения игры.
      */
-    private resumeGame() {
-        let gameManager = director.getScene().getChildByName("GameManager").getComponent(GameManager);
-        gameManager.resumeGame();
+    private resumeGame() : void {
+        const scene:Scene = director.getScene();
+        const gameManager:Node = scene.getChildByName("GameManager");
+        const gameManagerComponent:GameManager = gameManager.getComponent(GameManager);
+       
+        gameManagerComponent.resumeGame();
     }
 
 
@@ -25,7 +28,7 @@ export class PauseWindowManager extends Component {
      * Метод для возврата в главное меню.
      * Загружает сцену "MainMenuScene" и останавливает все запланированные действия.
      */
-    private mainMenu() {
+    private mainMenu() : void {
         director.loadScene("MainMenuScene");
         this.unscheduleAllCallbacks();
     }
